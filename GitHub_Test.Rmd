@@ -1,0 +1,12 @@
+---
+title: "GitHub Test"
+author: "Noah Crawley"
+output:
+  word_document: default
+  pdf_document: default
+  html_document: default
+---
+```{r}
+print("Hello World!")
+```
+
