@@ -1,2 +1,2 @@
 # STAT-345-S24
-Test to set up GitHub
+A testing workplace for STAT 345, Spring 2024
