@@ -1,0 +1,11 @@
+---
+title: "STAT 345 Midterm Project"
+author: "Noah Crawley"
+date: "2024-03-23"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
