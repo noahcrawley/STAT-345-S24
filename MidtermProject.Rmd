@@ -9,3 +9,28 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+## Graphic
+
+```{r}
+library(nbastatR)
+library(ggplot2)
+
+# Obtaining shooting data
+shot_data <- data.frame() # Initialize empty data frame for data
+
+for (season in 1997:2023) { # Iterate through all completed seasons that contain shot data
+  season_data <- teams_shots(teams = "Miami Heat", seasons = season, return_message = FALSE) # Obtain current season data
+  shot_data <- rbind(shot_data, season_data) #  Add the shot data for the current season to the shot_data data frame
+}
+
+test <- teams_shots(teams = "Miami Heat", seasons = 2023)
+
+
+
+
+
+
+
+
+
+```
