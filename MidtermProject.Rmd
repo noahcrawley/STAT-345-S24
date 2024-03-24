@@ -11,26 +11,154 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Graphic
 
-```{r}
+```{r, warning=FALSE}
+# Packages
 library(nbastatR)
 library(ggplot2)
+library(gganimate)
+library(dplyr)
 
 # Obtaining shooting data
 shot_data <- data.frame() # Initialize empty data frame for data
 
-for (season in 1997:2023) { # Iterate through all completed seasons that contain shot data
+for (season in 2004:2023) { # Iterate through all completed seasons that contain shot data
   season_data <- teams_shots(teams = "Miami Heat", seasons = season, return_message = FALSE) # Obtain current season data
   shot_data <- rbind(shot_data, season_data) #  Add the shot data for the current season to the shot_data data frame
 }
 
-test <- teams_shots(teams = "Miami Heat", seasons = 2023)
+
+# Creating shot chart graphic
+shot_chart <- ggplot(shot_data, aes(x = locationX, y = locationY, color = isShotMade)) + 
+  geom_point(size = 0.2, alpha = 0.2) +
+  scale_color_manual(values = c("TRUE" = "green", "FALSE" = "white"),
+                     labels = c("TRUE" = "Made", "FALSE" = "Missed")) +
+  labs(color = "Shot Result",
+       title = "Miami Heat Team Shot Charts (2003-2023)") +
+  theme_void() +
+  theme(plot.title = element_text(size = 18, hjust = 0.5, color = "black"),
+        panel.background = element_rect(fill = "black")) +
+  # Coordinates are relative to the hoop, not baseline
+  xlim(-250, 250) + # Dimensions of a basketball court are 50 x 94 feet 
+  ylim(-52.5, 417.5) +
+  # Add the perimeter of half the court
+  geom_segment(x = -250, y = -52.5, xend = -250, yend = 417.5, color = "red") + 
+  geom_segment(x = 250, y = -52.5, xend = 250, yend = 417.5, color = "red") + 
+  geom_segment(x = -250, y = -52.5, xend = 250, yend = -52.5, color = "red") +
+  geom_segment(x = -250, y = 417.5, xend = 250, yend = 417.5, color = "red")+
+  # Add the three point line
+  geom_segment(x = -220, y = -52.5, xend = -220, yend = 87.5, color = "red") +
+  geom_segment(x = 220, y = -52.5, xend = 220, yend = 87.5, color = "red") +
+  geom_curve(x = -220, y = 87.5, xend = 0, yend = 237.5, color = "red", curvature = -0.275) +
+  geom_curve(x = 220, y = 87.5, xend = 0, yend = 237.5, color = "red", curvature = 0.275) +
+  # Add the paint
+  geom_segment(x = -60, y = -52.5, xend = -60, yend = 137.5, color = "red") +
+  geom_segment(x = 60, y = -52.5, xend = 60, yend = 137.5, color = "red") +
+  geom_segment(x = 60, y = 137.5, xend = -60, yend = 137.5, color = "red") +
+  # Add the free throw circle
+  geom_curve(x = -60, y = 137.5, xend = 0, yend = 177.5, color = "red", curvature = -0.28) +
+  geom_curve(x = 60, y = 137.5, xend = 0, yend = 177.5, color = "red", curvature = 0.28) +
+  # Add the hoop
+  geom_curve(x = 0, y = -12.5, xend = 0, yend = 12.5, color = "red", curvature = -1) +
+  geom_curve(x = 0, y = -12.5, xend = 0, yend = 12.5, color = "red", curvature = 1) +
+  # Add the backboard
+  geom_segment(x = -30, y = -12.5, xend = 30, yend = -12.5, color = "red") +
+  # Add the center circle
+  geom_curve(x = -60, y = 417.5, xend = 0, yend = 377.5, color = "red", curvature = 0.285) +
+  geom_curve(x = 60, y = 417.5, xend = 0, yend = 377.5, color = "red", curvature = -0.285) +
+  facet_wrap(~slugSeason) # Create a group of individual shot charts separated by season 
+  
+print(shot_chart)
+```
+
+## Extension of Shot Data (4 Point Shot)
+
+```{r, warning=FALSE}
+# Create separate tables for shot types
+long_shot_data <- shot_data[shot_data$zoneRange == "24+ ft.",]
+short_shot_data <- shot_data[shot_data$zoneRange != "24+ ft.",]
+
+# Calculate 2P expected value
+two_attempts <- nrow(short_shot_data)
+two_makes <- sum(short_shot_data$isShotMade == TRUE)
+two_expected_value <- (two_makes / two_attempts) * 2 # Equal to 1.01303
+
+# Calculate 3P expected value
+three_attempts <- nrow(long_shot_data)
+three_makes <- sum(long_shot_data$isShotMade == TRUE)
+three_expected_value <- (three_makes / three_attempts) * 3 # Equal to 1.088042
+
+# Calculate average expected value of 2P and 3P shots
+average_expected_value <- (three_expected_value + two_expected_value) / 2 # Equal to 1.050536
+
+# Calculate the expected values of 4P shot at different distances 
+four_expected_values <- c()
+for (distance in unique(long_shot_data$distanceShot)) { # Traverse through all distances shots took place behind 3P line
+  subset_data <- shot_data[shot_data$distanceShot >= distance, ] # Table of all shots at and further than specified distance
+  probability <- sum(subset_data$isShotMade == TRUE) / nrow(subset_data) # Shooting percentage at the distance
+  four_expected_value <- probability * 4  # Expected value of 4P shot at that distance
+  four_expected_values <- c(four_expected_values, four_expected_value)
+}
+four_expected_values <- data.frame(distance = unique(long_shot_data$distanceShot),
+                                   expected_value = four_expected_values) # Pair expected values to corresponding distance
+
+# Find the distance with the closest expected value to the average expected value
+differences <- abs(four_expected_values$expected_value - average_expected_value) 
+closest_index <- which.min(differences) # Find the index of the value with the smallest difference to the average expected value
+four_distance  <- four_expected_values$distance[closest_index] # Distance of 27 feet from the hoop has the closest expected value to the average expected value of 2P and 3P shots
 
 
+# Obtain 4P shot attempts
+four_shot_data <- shot_data[shot_data$distanceShot >= four_distance, ]
 
-
-
-
-
+# Create a graphic displaying 4P shot attempts and a 4P arc
+four_shot_chart <- ggplot(four_shot_data, aes(x = locationX, y = locationY, color = isShotMade)) + 
+  geom_point(size = 0.5, alpha = 0.3) +
+  scale_color_manual(values = c("TRUE" = "green", "FALSE" = "white"),
+                     labels = c("TRUE" = "Made", "FALSE" = "Missed")) +
+  labs(color = "Shot Result",
+       title = "Miami Heat \"4-Point Shots\" (2003-2023)") +
+  theme_void() +
+  theme(plot.title = element_text(size = 18, hjust = 0.5, color = "black"),
+        panel.background = element_rect(fill = "black")) +
+  # Coordinates are relative to the hoop, not baseline
+  xlim(-250, 250) + # Dimensions of a basketball court are 50 x 94 feet 
+  ylim(-52.5, 417.5) +
+  # Add the perimeter of half the court
+  geom_segment(x = -250, y = -52.5, xend = -250, yend = 417.5, color = "red") + 
+  geom_segment(x = 250, y = -52.5, xend = 250, yend = 417.5, color = "red") + 
+  geom_segment(x = -250, y = -52.5, xend = 250, yend = -52.5, color = "red") +
+  geom_segment(x = -250, y = 417.5, xend = 250, yend = 417.5, color = "red")+
+  # Add the three point line
+  geom_segment(x = -220, y = -52.5, xend = -220, yend = 87.5, color = "red") +
+  geom_segment(x = 220, y = -52.5, xend = 220, yend = 87.5, color = "red") +
+  geom_curve(x = -220, y = 87.5, xend = 0, yend = 237.5, color = "red", curvature = -0.275) +
+  geom_curve(x = 220, y = 87.5, xend = 0, yend = 237.5, color = "red", curvature = 0.275) +
+  # Add the paint
+  geom_segment(x = -60, y = -52.5, xend = -60, yend = 137.5, color = "red") +
+  geom_segment(x = 60, y = -52.5, xend = 60, yend = 137.5, color = "red") +
+  geom_segment(x = 60, y = 137.5, xend = -60, yend = 137.5, color = "red") +
+  # Add the free throw circle
+  geom_curve(x = -60, y = 137.5, xend = 0, yend = 177.5, color = "red", curvature = -0.28) +
+  geom_curve(x = 60, y = 137.5, xend = 0, yend = 177.5, color = "red", curvature = 0.28) +
+  # Add the hoop
+  geom_curve(x = 0, y = -12.5, xend = 0, yend = 12.5, color = "red", curvature = -1) +
+  geom_curve(x = 0, y = -12.5, xend = 0, yend = 12.5, color = "red", curvature = 1) +
+  # Add the backboard
+  geom_segment(x = -30, y = -12.5, xend = 30, yend = -12.5, color = "red") +
+  # Add the center circle
+  geom_curve(x = -60, y = 417.5, xend = 0, yend = 377.5, color = "red", curvature = 0.285) +
+  geom_curve(x = 60, y = 417.5, xend = 0, yend = 377.5, color = "red", curvature = -0.285) +
+  # Add four point line
+  geom_curve(x = -250, y = 95, xend = 0, yend = 270, color = "#00BFFF", curvature = -0.265) +
+  geom_curve(x = 250, y = 95, xend = 0, yend = 270, color = "#00BFFF", curvature = 0.265) +
+  # Add label to four point line
+  geom_label(x = 70, y = 195, label = "Four Point Line", color = "#00BFFF",fill = "white", size = 3) +
+  geom_segment(x= 50, y = 205, xend = 0, yend = 270, color = "#00BFFF")
+             
+  
+print(four_shot_chart)
 
 
 ```
+
+## Report
