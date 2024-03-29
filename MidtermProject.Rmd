@@ -1,22 +1,24 @@
 ---
 title: "STAT 345 Midterm Project"
 author: "Noah Crawley"
-date: "2024-03-23"
+date: "2024-03-29"
 output: html_document
 ---
-
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE)
 ```
 
-## Graphic
+## Team Shot Charts Over Time
 
-```{r, warning=FALSE}
+```{r, warning=FALSE, message=FALSE, error=FALSE, fig.align='center', fig.width=10, fig.height=8}
 # Packages
 library(nbastatR)
 library(ggplot2)
 library(gganimate)
 library(dplyr)
+library(knitr)
+
+Sys.setenv("VROOM_CONNECTION_SIZE" = "1000000") # Fix to load large data
 
 # Obtaining shooting data
 shot_data <- data.frame() # Initialize empty data frame for data
@@ -27,15 +29,16 @@ for (season in 2004:2023) { # Iterate through all completed seasons that contain
 }
 
 
+
 # Creating shot chart graphic
 shot_chart <- ggplot(shot_data, aes(x = locationX, y = locationY, color = isShotMade)) + 
-  geom_point(size = 0.2, alpha = 0.2) +
+  geom_point(size = 0.3, alpha = 0.3) +
   scale_color_manual(values = c("TRUE" = "green", "FALSE" = "white"),
                      labels = c("TRUE" = "Made", "FALSE" = "Missed")) +
   labs(color = "Shot Result",
        title = "Miami Heat Team Shot Charts (2003-2023)") +
   theme_void() +
-  theme(plot.title = element_text(size = 18, hjust = 0.5, color = "black"),
+  theme(plot.title = element_text(size = 20, hjust = 0.5, color = "black"),
         panel.background = element_rect(fill = "black")) +
   # Coordinates are relative to the hoop, not baseline
   xlim(-250, 250) + # Dimensions of a basketball court are 50 x 94 feet 
@@ -66,14 +69,174 @@ shot_chart <- ggplot(shot_data, aes(x = locationX, y = locationY, color = isShot
   geom_curve(x = -60, y = 417.5, xend = 0, yend = 377.5, color = "red", curvature = 0.285) +
   geom_curve(x = 60, y = 417.5, xend = 0, yend = 377.5, color = "red", curvature = -0.285) +
   facet_wrap(~slugSeason) # Create a group of individual shot charts separated by season 
-  
+
 print(shot_chart)
 ```
 
-## Extension of Shot Data (4 Point Shot)
+## General Analysis of Shot Charts By Season
 
-```{r, warning=FALSE}
-# Create separate tables for shot types
+* **Common shot locations on the court**
+  + More shots are taken from behind the 3 point line as the years have progressed.
+  + More 2 point shots are located inside of the paint as the years have progressed.
+      
+* **Distance of shots taken**
+  + Greater variability in the distance of 3 point shots in the most recent seasons compared to older seasons.
+      
+* **Total number of shots taken**
+  + The number of shots per season has increased as the years have progressed.
+
+## Common Shot Locations on the Court
+
+Trends of shot locations are best summarized through the first and last seasons shot charts:
+```{r, warning=FALSE, message=FALSE, error=FALSE, fig.align='center', fig.width=8, fig.height=3}
+# Filter data for the first and last seasons
+shot_data_subset <- shot_data %>% 
+  filter(yearSeason == min(yearSeason) | yearSeason == max(yearSeason))
+
+# Create shot chart for the subset data
+shot_chart_subset <- ggplot(shot_data_subset, aes(x = locationX, y = locationY, color = isShotMade)) + 
+  geom_point(size = 0.3, alpha = 0.3) +
+  scale_color_manual(values = c("TRUE" = "green", "FALSE" = "white"),
+                     labels = c("TRUE" = "Made", "FALSE" = "Missed")) +
+  labs(color = "Shot Result",
+       title = "Miami Heat Team Shot Charts") +
+  theme_void() +
+  theme(plot.title = element_text(size = 14, hjust = 0.5, color = "black"),
+        panel.background = element_rect(fill = "black")) +
+  # Coordinates are relative to the hoop, not baseline
+  xlim(-250, 250) + # Dimensions of a basketball court are 50 x 94 feet 
+  ylim(-52.5, 417.5) +
+  # Add the perimeter of half the court
+  geom_segment(x = -250, y = -52.5, xend = -250, yend = 417.5, color = "red") + 
+  geom_segment(x = 250, y = -52.5, xend = 250, yend = 417.5, color = "red") + 
+  geom_segment(x = -250, y = -52.5, xend = 250, yend = -52.5, color = "red") +
+  geom_segment(x = -250, y = 417.5, xend = 250, yend = 417.5, color = "red")+
+  # Add the three point line
+  geom_segment(x = -220, y = -52.5, xend = -220, yend = 87.5, color = "red") +
+  geom_segment(x = 220, y = -52.5, xend = 220, yend = 87.5, color = "red") +
+  geom_curve(x = -220, y = 87.5, xend = 0, yend = 237.5, color = "red", curvature = -0.275) +
+  geom_curve(x = 220, y = 87.5, xend = 0, yend = 237.5, color = "red", curvature = 0.275) +
+  # Add the paint
+  geom_segment(x = -60, y = -52.5, xend = -60, yend = 137.5, color = "red") +
+  geom_segment(x = 60, y = -52.5, xend = 60, yend = 137.5, color = "red") +
+  geom_segment(x = 60, y = 137.5, xend = -60, yend = 137.5, color = "red") +
+  # Add the free throw circle
+  geom_curve(x = -60, y = 137.5, xend = 0, yend = 177.5, color = "red", curvature = -0.28) +
+  geom_curve(x = 60, y = 137.5, xend = 0, yend = 177.5, color = "red", curvature = 0.28) +
+  # Add the hoop
+  geom_curve(x = 0, y = -12.5, xend = 0, yend = 12.5, color = "red", curvature = -1) +
+  geom_curve(x = 0, y = -12.5, xend = 0, yend = 12.5, color = "red", curvature = 1) +
+  # Add the backboard
+  geom_segment(x = -30, y = -12.5, xend = 30, yend = -12.5, color = "red") +
+  # Add the center circle
+  geom_curve(x = -60, y = 417.5, xend = 0, yend = 377.5, color = "red", curvature = 0.285) +
+  geom_curve(x = 60, y = 417.5, xend = 0, yend = 377.5, color = "red", curvature = -0.285) +
+  facet_wrap(~slugSeason) # Create a group of individual shot charts separated by season 
+
+# Print only the first and last shot charts
+print(shot_chart_subset)
+
+```
++ Looking at 3 point shots, you can see that as time has progressed the frequency of 3 point shots has increased.
+
++ There is more than double the amount of 3 point shots in 2023 season than the 2004 season, which is a gradual change depicted in the graph.
+
+```{r}
+# Count the number of 3P shots by year
+count_3pt <- shot_data %>%
+  filter(typeShot == "3PT Field Goal") %>%
+  group_by(slugSeason) %>%
+  summarise(count_3pt = n())
+
+# Graphic displaying number of 3P shots over time 
+colnames(count_3pt) <- c("Season", "Shots")
+
+num_3pt_graphic <- ggplot(count_3pt, aes(x = Season, y = Shots)) +
+  geom_point() +
+  geom_line(aes(group = 1)) +
+  labs(title = "Total Number of 3 Point Shots Taken By Season") + 
+  theme_bw() + 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) # Adjust x-axis variables to show vertically
+
+print(num_3pt_graphic)
+```
+
++ Looking at 2 point shots, you can see that as time has progressed the frequency of shots in the paint but outside of the restricted area has increased. Which can be visualized in the graph below:
+```{r}
+# Count number of shot in the paint by year
+count_paint <- shot_data %>%
+  filter(zoneBasic == "In The Paint (Non-RA)") %>%
+  group_by(slugSeason) %>%
+  summarise(count_paint = n())
+
+# Graphic displaying number of shots taken in the paint over time 
+colnames(count_paint) <- c("Season", "Shots")
+
+num_paint_graphic <- ggplot(count_paint, aes(x = Season, y = Shots)) +
+  geom_point() +
+  geom_line(aes(group = 1)) +
+  labs(title = "Total Number of Shots Taken in the Paint By Season") + 
+  theme_bw() + 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) # Adjust x-axis variables to show vertically
+
+print(num_paint_graphic)
+
+```
+
+
+## Distance of Shots Taken
+
+Looking at the subset of shot charts above you can see the density of the points along the three point line is different in the graphs. This trend is seen as the years have progressed to the latest season.
+
++ More "deep" 3 point shots are being taken now than before. 
++ More variability in location along the 3 point line now.
+
+
+## Total Number of Shots Taken
+Over the last 20 seasons completed the total number of shots taken by the Miami Heat has increased. This can be visualized through the graph below:
+
+```{r, fig.height=4, fig.width=6, fig.align='center'}
+# Find the total number of shots in each season
+num_shots_total <- c()
+
+for (slugSeason in unique(shot_data$slugSeason)) { #Traverse through all years 
+  num_shots_season <- nrow(shot_data[shot_data$slugSeason == slugSeason, ]) # Sum the total number of entries 
+  num_shots_total <- c(num_shots_total, num_shots_season)
+}
+
+num_shots_total <- data.frame(Season = unique(shot_data$slugSeason), Shots = num_shots_total)
+
+# Graphic displaying number of shots each season
+num_shots_graphic <- ggplot(num_shots_total, aes(x = Season, y = Shots)) +
+  geom_point() +
+  geom_line(aes(group = 1)) +
+  geom_hline(yintercept = c(6278.4, 6667.4), linetype = "dashed", color = c("red", "blue")) +
+  annotate("text", y = 6278.4, x = Inf, label = "Average (2003-2013)", vjust = -0.5, hjust = 1, color = "red", size = 3) +
+  annotate("text", y = 6667.4, x = Inf, label = "Average (2014-2023)", vjust = -0.5, hjust = 1, color = "blue", size = 3) +
+  labs(title = "Total Number of Shots Taken By Season") + 
+  theme_bw() + 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) # Adjust x-axis variables to show vertically
+
+print(num_shots_graphic)
+
+
+# Calculate average number of shots over the first 10 years of the data and last 10 years of the data
+ave_shots_total_first <- sum(num_shots_total[1:10, "Shots"]) / 10
+ave_shots_total_last <- sum(num_shots_total[11:20, "Shots"]) /10
+
+# Percent increase in shots
+percent_increase_shots <- ((ave_shots_total_last - ave_shots_total_first)  / ave_shots_total_first) * 100
+```
+
++ The average number of shots taken in seasons during 2003-2013 is `r ave_shots_total_first`.
++ The average number of shots takne in seasons during 2014-2023 is `r ave_shots_total_last`.
++ This is a `r percent_increase_shots`% increase in the last 10 seasons when compared to the 10 previous seasons before. 
+
+
+## Extension of Shooting Data (4 Point Line)
+
+```{r, warning=FALSE, fig.align='center'}
+# Create separate tables for 2P and 3P shots
 long_shot_data <- shot_data[shot_data$zoneRange == "24+ ft.",]
 short_shot_data <- shot_data[shot_data$zoneRange != "24+ ft.",]
 
@@ -93,7 +256,7 @@ average_expected_value <- (three_expected_value + two_expected_value) / 2 # Equa
 # Calculate the expected values of 4P shot at different distances 
 four_expected_values <- c()
 for (distance in unique(long_shot_data$distanceShot)) { # Traverse through all distances shots took place behind 3P line
-  subset_data <- shot_data[shot_data$distanceShot >= distance, ] # Table of all shots at and further than specified distance
+  subset_data <- shot_data[shot_data$distanceShot >= distance, ] # Table of all shots at, and further than specified distance
   probability <- sum(subset_data$isShotMade == TRUE) / nrow(subset_data) # Shooting percentage at the distance
   four_expected_value <- probability * 4  # Expected value of 4P shot at that distance
   four_expected_values <- c(four_expected_values, four_expected_value)
@@ -107,12 +270,13 @@ closest_index <- which.min(differences) # Find the index of the value with the s
 four_distance  <- four_expected_values$distance[closest_index] # Distance of 27 feet from the hoop has the closest expected value to the average expected value of 2P and 3P shots
 
 
+
 # Obtain 4P shot attempts
 four_shot_data <- shot_data[shot_data$distanceShot >= four_distance, ]
 
 # Create a graphic displaying 4P shot attempts and a 4P arc
 four_shot_chart <- ggplot(four_shot_data, aes(x = locationX, y = locationY, color = isShotMade)) + 
-  geom_point(size = 0.5, alpha = 0.3) +
+  geom_point(size = 0.5, alpha = 0.4) +
   scale_color_manual(values = c("TRUE" = "green", "FALSE" = "white"),
                      labels = c("TRUE" = "Made", "FALSE" = "Missed")) +
   labs(color = "Shot Result",
@@ -155,10 +319,50 @@ four_shot_chart <- ggplot(four_shot_data, aes(x = locationX, y = locationY, colo
   geom_label(x = 70, y = 195, label = "Four Point Line", color = "#00BFFF",fill = "white", size = 3) +
   geom_segment(x= 50, y = 205, xend = 0, yend = 270, color = "#00BFFF")
              
-  
 print(four_shot_chart)
+```
 
+
+## Location of 4 Point Line
+
+Using Miami Heat team shot data for the last 20 completed seasons:
+
++ Expected value of a 2 point shot is `r two_expected_value`
++ Expected value of a 3 point shot is `r three_expected_value`
++ Average expected value for both shots is `r average_expected_value`
+
+The 4 point line would be added at the distance that results in the 4 point shot expected value to be closest to the average.
+
++ This distance would be `r four_distance` as seen in the table below. 
+```{r, fig.align='left'}
+
+# Print the expected value data in a clean and neat way
+colnames(four_expected_values) <- c("Distance", "Expected Value")
+kable(four_expected_values)
 
 ```
 
-## Report
+
+## Effect of the 4 Point Shot
+
+```{r, include=FALSE}
+# Obtain data for all made shots in the 2023 season
+made_shots_2023 <- shot_data[shot_data$yearSeason == "2023" & shot_data$isShotMade == "TRUE",]
+
+# Subset the data into 2P and 3P shots
+threes_2023 <- made_shots_2023[made_shots_2023$zoneRange == "24+ ft.",]
+twos_2023 <- made_shots_2023[made_shots_2023$zoneRange != "24+ ft.",]
+
+# Calculate total points scored
+reg_points <- (nrow(twos_2023) * 2) + (nrow(threes_2023) * 3)
+
+# Subset the data for shots that would be 4P shots and updated 3P shots
+fours_2023 <- threes_2023[threes_2023$distanceShot >= four_distance,]
+alt_threes_2023 <- threes_2023[threes_2023$distanceShot < four_distance,]
+
+# Calculate total points scored with 4P line
+alt_points <- (nrow(twos_2023) * 2) + (nrow(alt_threes_2023) * 3) + (nrow(fours_2023) * 4)
+```
++ As a team in the most recent season, the Miami Heat scored `r reg_points` points in the 2022-2023 season.
++ However, with the addition of the 4 point line, the Miami Heat would have scored `r alt_points` points in the 2022-2023 season.  
++ This is an increase of `r alt_points - reg_points` points due to the addition of a 4 point line. 
